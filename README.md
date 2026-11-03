@@ -76,7 +76,7 @@ Optionally relocate all private app data with `LIFE_GARDEN_DATA_DIR` (absolute p
 
 - Today: Singapore date/time, one priority and first step, plan tomorrow, quick journal, mood and energy, scheduled habits, and bedtime intentions.
 - Focus: 25/60/90-minute sessions, pause/resume, focus mode, persisted deadlines, and outcome notes on completion or early finish.
-- Habits: yes/no, counts, minutes and numeric targets; editable weekdays; pause; weekly history; historical corrections; excused recovery days. Edits apply from today, leaving earlier schedules intact.
+- Habits: create, rename/edit, remove and restore directly from the daily list; yes/no, counts, minutes and numeric targets; editable weekdays; pause; weekly history; historical corrections; excused recovery days. Edits and removal apply from today, leaving earlier schedules and logs intact. Removal is reversible through **Removed habits**; restoring resumes the habit from today without backfilling the removed period.
 - Goals: annual/quarterly/monthly/weekly horizons, qualitative 0/1 outcomes, numeric progress, dependencies, due dates, status, editing and archive/restore.
 - Garden: six life areas, related goals/habits, outcome progress, activity counts, XP, levels and an original animated plant.
 - Journal: calendar browsing, morning notes, evening prompts, editable weekly reflections, tomorrow planning and actual overnight sleep records on the wake-up date.

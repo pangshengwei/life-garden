@@ -5,7 +5,7 @@ The app was built and exercised on this Mac using a separate QA SQLite directory
 ## Automated checks
 
 - `npm run typecheck`: TypeScript validation.
-- `npm test`: thirteen domain/storage tests. These cover Singapore date rollover, empty activity seeds, recovery-day scoring, historical habit schedules, numeric completion thresholds and capped focus XP, invalid backup rejection, durable SQLite reopen, relational table projections, concurrent revision rejection, Obsidian habit properties/annotation preservation, safe SQLite commits when the mirror fails, rolling 30-day denominators and thresholds, corrected goal-event aggregation, and persisted dated goal history.
+- `npm test`: sixteen domain/storage tests. These cover Singapore date rollover, empty activity seeds, recovery-day scoring, historical habit schedules, numeric completion thresholds and capped focus XP, invalid backup rejection, durable SQLite reopen, relational table projections, concurrent revision rejection, Obsidian habit properties/annotation preservation, safe SQLite commits when the mirror fails, rolling 30-day denominators and thresholds, corrected goal-event aggregation, and persisted dated goal history.
 - `npm run build`: optimized Next.js build, including the local route handler. No build warnings after the explicit dynamic-path tracing opt-out.
 
 ## Browser checks
@@ -30,6 +30,10 @@ The first sleep-form check revealed native datetime input values could reset dur
 The new board was checked against a separate synthetic 60-day fixture stored outside the repository. Colour levels, keyboard-accessible date buttons and the day-detail modal were inspected. The modal showed the exact scheduled habits and a dated goal achievement. Achieving another goal through the UI immediately added it to that day's details. Completing the remaining scheduled habits changed the rolling score from 3/30 (10%) to 4/30 (13%). Goal achievements did not affect that habit-only percentage.
 
 The board and day-detail modal also worked at 390 CSS pixels with no document-level horizontal overflow; the calendar itself scrolls horizontally. The README preview uses only this synthetic fixture. Fresh public installations have empty activity and financial history; the existing private local database is retained.
+
+## Habit management
+
+Created a habit directly from the selected-day list, renamed it with its pencil control, removed it with its trash control, and restored it from Removed habits in a separate test database. Removal and restoration persisted through refresh, with no browser console errors. The Today list exposes the same controls. Added tests cover earlier-name/log preservation, an excluded removal interval followed by restoration, and migration of an existing SQLite habits table without data loss. Removed habits also carry their archived state into the Obsidian mirror.
 
 ## Boundaries
 

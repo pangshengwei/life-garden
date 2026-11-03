@@ -2988,3 +2988,112 @@ tr:last-child td {
     font-size: 22px;
   }
 }
+.habit-trailing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.habit-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2px;
+}
+.habit-row-actions .icon-button {
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+}
+.habit-row-actions .remove-habit-button:hover {
+  color: #b57c65;
+  background: var(--peach);
+}
+.habit-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.habit-list-heading {
+  align-items: flex-start;
+}
+.habit-list-heading .habit-list-actions {
+  max-width: 60%;
+}
+.removed-habit-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.removed-habit-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.removed-habit-list li:last-child {
+  border-bottom: 0;
+}
+.habits-card .section-heading {
+  align-items: flex-start;
+}
+.habits-card .habit-list-actions {
+  gap: 8px;
+}
+.habits-card .habit-list-actions .button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 9px;
+}
+@media (max-width: 760px) {
+  .habit-list-heading {
+    flex-wrap: wrap;
+  }
+  .habit-list-heading .habit-list-actions {
+    max-width: 100%;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .habit-list-heading > .habit-list-actions .tag {
+    margin-right: auto;
+  }
+}
+@media (max-width: 450px) {
+  .habit-row.managed {
+    display: grid;
+    grid-template-columns: 19px 28px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 5px;
+    padding: 14px 0;
+  }
+  .habit-row.managed .habit-trailing {
+    grid-column: 3;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .habit-row.managed .habit-row-actions .icon-button {
+    width: 32px;
+    height: 32px;
+  }
+  .habit-row.managed .habit-info strong {
+    font-size: 11px;
+  }
+  .habits-card .section-heading {
+    flex-wrap: wrap;
+  }
+  .habits-card .habit-list-actions {
+    justify-content: flex-start;
+  }
+}
+.habit-info strong {
+  overflow-wrap: anywhere;
+}
+.table-scroll,
+.activity-scroll {
+  contain: inline-size layout paint;
+}

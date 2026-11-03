@@ -54,6 +54,7 @@ export function mirrorToObsidian(data: GardenData, root: string) {
         .filter((g) => g.category === c.id)
         .map((g) => `- [[LG-goal-${g.id}|${g.title}]]`)
         .join('\n')}\n\n## Habits\n${data.habits
+        .filter((h) => !h.archived)
         .map((h) => definition(h, '9999-12-31'))
         .filter((h) => h?.category === c.id)
         .map((h) => `- ${h!.name}`)
@@ -71,6 +72,7 @@ export function mirrorToObsidian(data: GardenData, root: string) {
         target: h.target,
         unit: h.unit,
         paused: h.paused,
+        archived: !!habit.archived,
         scheduled_days: h.days,
       },
       `# ${h.name}\n\n${areaLink(h.category)}\n\nTarget: ${h.target} ${h.unit}\n\nSchedules and targets are edited in the app; previous revisions are retained in SQLite and JSON backups.`,

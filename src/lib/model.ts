@@ -60,7 +60,7 @@ export type HabitRevision = {
   target: number;
   unit: string;
 };
-export type Habit = { id: string; revisions: HabitRevision[] };
+export type Habit = { id: string; revisions: HabitRevision[]; archived?: boolean };
 export type HabitDefinition = HabitRevision & { id: string };
 export type Day = {
   priority: string;
@@ -182,6 +182,17 @@ export function dateLabel(
 export function definition(habit: Habit, date: string): HabitDefinition | undefined {
   const revision = habit.revisions.filter((r) => r.from <= date).at(-1);
   return revision ? { ...revision, id: habit.id } : undefined;
+}
+/** Change a habit from a date onward without rewriting earlier schedules or names. */
+export function reviseHabit(habit: Habit, revision: HabitRevision, date: string) {
+  habit.revisions = [...habit.revisions.filter((r) => r.from < date), { ...revision, from: date }];
+}
+/** Removal is reversible; a paused revision keeps removed dates out of habit scores. */
+export function setHabitArchived(habit: Habit, archived: boolean, date: string) {
+  const current = definition(habit, date);
+  if (!current) throw new Error('This habit has no definition for the selected date.');
+  reviseHabit(habit, { ...current, paused: archived }, date);
+  habit.archived = archived;
 }
 export function scheduled(data: GardenData, date: string): HabitDefinition[] {
   return data.habits

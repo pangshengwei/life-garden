@@ -18,21 +18,12 @@ import {
   X,
   Maximize2,
 } from 'lucide-react';
-import {
-  addDays,
-  categories,
-  completed,
-  dateLabel,
-  dayScore,
-  emptyDay,
-  scheduled,
-  totalXP,
-  weekDates,
-  type HabitDefinition,
-} from '@/lib/model';
-import { CategoryIcon, CategorySelect, Field, FormActions, Modal, Progress, useApp } from './ui';
+import { addDays, dateLabel, dayScore, emptyDay, scheduled, totalXP, weekDates } from '@/lib/model';
+import { CategorySelect, Field, FormActions, Modal, Progress, useApp } from './ui';
 import { Plant } from './plant';
 import { HabitDayScore } from './activity-board';
+import { HabitRow } from './habit-row';
+import { NewHabitButton, RemovedHabitsButton } from './habit-management';
 export function PlanDialog({ date, onClose }: { date: string; onClose: () => void }) {
   const { data, updateDay, notify } = useApp();
   const day = data.days[date] || emptyDay();
@@ -79,85 +70,6 @@ export function PlanDialog({ date, onClose }: { date: string; onClose: () => voi
         <FormActions onClose={onClose} label="Plant the intention" />
       </form>
     </Modal>
-  );
-}
-export function HabitRow({ habit, date }: { habit: HabitDefinition; date: string }) {
-  const { data, update, notify } = useApp();
-  const val = data.days[date]?.logs[habit.id];
-  const done = completed(habit, val);
-  const [entry, setEntry] = useState(false);
-  function log(value: number | 'rest') {
-    update((d) => {
-      d.days[date] ??= emptyDay();
-      d.days[date].logs[habit.id] = value;
-    });
-    if (typeof value === 'number' && value >= habit.target && !done)
-      notify('A small action. A little growth. +10 XP');
-  }
-  return (
-    <>
-      <div className={`habit-row ${done ? 'done' : ''} ${val === 'rest' ? 'resting' : ''}`}>
-        <button
-          className={`habit-check ${done ? 'checked' : ''}`}
-          aria-label={`${done ? 'Undo' : 'Complete'} ${habit.name}`}
-          aria-pressed={done}
-          onClick={() => log(done ? 0 : habit.target)}
-        >
-          {done ? <Check size={16} /> : val === 'rest' ? <Moon size={14} /> : null}
-        </button>
-        <CategoryIcon category={habit.category} size={17} />
-        <div className="habit-info">
-          <strong>{habit.name}</strong>
-          <small>
-            {val === 'rest'
-              ? 'Recovery day · excluded from score'
-              : habit.type === 'check'
-                ? categories.find((c) => c.id === habit.category)?.short
-                : `${typeof val === 'number' ? val : 0} / ${habit.target} ${habit.unit}`}
-          </small>
-        </div>
-        {habit.type !== 'check' && (
-          <button className="text-button habit-log" onClick={() => setEntry(true)}>
-            Log
-          </button>
-        )}
-        <button
-          className="rest-button"
-          aria-label={`${val === 'rest' ? 'Resume' : 'Excuse'} ${habit.name} for this day`}
-          title="Rest or adjust for today; excluded from score"
-          onClick={() => log(val === 'rest' ? 0 : 'rest')}
-        >
-          <Moon size={15} />
-        </button>
-        <span className="xp-label">{done ? '✓' : '+10 XP'}</span>
-      </div>
-      {entry && (
-        <Modal title={'Log ' + habit.name} onClose={() => setEntry(false)}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const form = new FormData(e.currentTarget);
-              log(Number(form.get('value')));
-              setEntry(false);
-            }}
-          >
-            <Field label={`Amount (${habit.unit || 'value'})`}>
-              <input
-                name="value"
-                type="number"
-                min="0"
-                max="100000"
-                step="any"
-                required
-                defaultValue={typeof val === 'number' ? val : 0}
-                autoFocus
-              />
-            </Field>
-            <FormActions onClose={() => setEntry(false)} label="Save progress" />
-          </form>
-        </Modal>
-      )}
-    </>
   );
 }
 export function FocusTimer({ now }: { now: Date }) {
@@ -460,9 +372,12 @@ export function Today({ now }: { now: Date }) {
                 <span className="eyebrow">TEND TO YOUR DAY</span>
                 <h2>Little habits, lasting change</h2>
               </div>
-              <span className="count-pill">
-                {score.done} / {score.total}
-              </span>
+              <div className="habit-list-actions">
+                <span className="count-pill">
+                  {score.done} / {score.total}
+                </span>
+                <NewHabitButton />
+              </div>
             </div>
             <div className="habit-progress">
               <Progress value={score.percent} label="Today's habit completion" />
@@ -478,6 +393,7 @@ export function Today({ now }: { now: Date }) {
                 <Moon size={13} />
                 Use the moon for rest or recovery.
               </span>
+              <RemovedHabitsButton />
               <button className="text-button" onClick={() => setView('Habits')}>
                 Make it yours
                 <ArrowRight size={14} />

@@ -17,6 +17,7 @@ export const dataSchema = z
       .array(
         z.object({
           id,
+          archived: z.boolean().optional(),
           revisions: z
             .array(
               z.object({

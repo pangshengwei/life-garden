@@ -13,12 +13,16 @@ export function createStore(directory: string, vaultRoot?: string) {
   db.pragma('busy_timeout = 5000');
   db.exec(`CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, json TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS daily_notes (date TEXT PRIMARY KEY, priority TEXT, first_step TEXT, mood INTEGER, energy INTEGER, sleep_start TEXT, sleep_end TEXT, notes TEXT, wins TEXT, progress TEXT, obstacles TEXT, lesson TEXT, weekly_reflection TEXT);
-    CREATE TABLE IF NOT EXISTS habits (id TEXT PRIMARY KEY, name TEXT, category TEXT, type TEXT, target REAL, paused INTEGER, revisions_json TEXT);
+    CREATE TABLE IF NOT EXISTS habits (id TEXT PRIMARY KEY, name TEXT, category TEXT, type TEXT, target REAL, paused INTEGER, revisions_json TEXT, archived INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS habit_logs (date TEXT, habit_id TEXT, value REAL, excused INTEGER, PRIMARY KEY(date,habit_id));
     CREATE TABLE IF NOT EXISTS goals (id TEXT PRIMARY KEY, title TEXT, category TEXT, status TEXT, current REAL, target REAL, unit TEXT, due TEXT, horizon TEXT, parent_id TEXT, archived INTEGER, notes TEXT);
     CREATE TABLE IF NOT EXISTS financial_snapshots (id TEXT PRIMARY KEY, date TEXT UNIQUE, liquid_including_srs REAL, accessible_excluding_srs REAL, net_worth REAL, securities REAL, investment_property_equity REAL, etf_percent REAL, annual_contributions REAL, notes TEXT);
     CREATE TABLE IF NOT EXISTS goal_events (id TEXT PRIMARY KEY, goal_id TEXT, date TEXT, title TEXT, category TEXT, previous REAL, current REAL, target REAL, unit TEXT, achieved INTEGER, was_achieved INTEGER);
     CREATE TABLE IF NOT EXISTS focus_sessions (id TEXT PRIMARY KEY, date TEXT, seconds REAL, output TEXT, category TEXT);`);
+  // Existing databases predate reversible habit removal.
+  const habitColumns = db.pragma('table_info(habits)') as Array<{ name: string }>;
+  if (!habitColumns.some((column) => column.name === 'archived'))
+    db.exec('ALTER TABLE habits ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
   const mirrorPath = path.join(vaultRoot || path.join(directory, 'obsidian'), 'Life Garden');
   function relational(data: GardenData) {
     for (const table of [
@@ -52,7 +56,9 @@ export function createStore(directory: string, vaultRoot?: string) {
       for (const [id, value] of Object.entries(d.logs))
         logInsert.run(date, id, value === 'rest' ? null : value, value === 'rest' ? 1 : 0);
     }
-    const habitInsert = db.prepare('INSERT INTO habits VALUES (?,?,?,?,?,?,?)');
+    const habitInsert = db.prepare(
+      'INSERT INTO habits (id,name,category,type,target,paused,revisions_json,archived) VALUES (?,?,?,?,?,?,?,?)',
+    );
     for (const h of data.habits) {
       const r = h.revisions.at(-1)!;
       habitInsert.run(
@@ -63,6 +69,7 @@ export function createStore(directory: string, vaultRoot?: string) {
         r.target,
         r.paused ? 1 : 0,
         JSON.stringify(h.revisions),
+        h.archived ? 1 : 0,
       );
     }
     const goalInsert = db.prepare('INSERT INTO goals VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');

@@ -24,7 +24,6 @@ import {
   type Category,
   type Goal,
   type Habit,
-  type HabitDefinition,
 } from '@/lib/model';
 import {
   CategoryIcon,
@@ -36,7 +35,8 @@ import {
   Progress,
   useApp,
 } from './ui';
-import { HabitRow } from './today';
+import { HabitRow } from './habit-row';
+import { HabitEditor, NewHabitButton, RemovedHabitsButton } from './habit-management';
 import { Plant } from './plant';
 import { ActivityBoard, HabitDayScore } from './activity-board';
 export function GoalEditor({ goal, onClose }: { goal?: Goal; onClose: () => void }) {
@@ -239,6 +239,7 @@ export function GoalsView() {
           </div>
           <div className="related-habit-tags">
             {data.habits
+              .filter((h) => !h.archived)
               .map((h) => definition(h, today))
               .filter((h) => h?.category === category)
               .map((h) => (
@@ -349,147 +350,15 @@ export function CategoryFilter() {
     </div>
   );
 }
-export function HabitEditor({ habit, onClose }: { habit?: Habit; onClose: () => void }) {
-  const { update, today } = useApp();
-  const current = habit ? definition(habit, today) : null;
-  const [draft, setDraft] = useState<Omit<HabitDefinition, 'id'>>(
-    current || {
-      from: today,
-      name: '',
-      category: 'health',
-      days: [0, 1, 2, 3, 4, 5, 6],
-      paused: false,
-      type: 'check',
-      target: 1,
-      unit: '',
-    },
-  );
-  const [error, setError] = useState('');
-  const patch = (v: Partial<typeof draft>) => setDraft({ ...draft, ...v });
-  return (
-    <Modal title={habit ? 'Make this habit yours' : 'A new little habit'} onClose={onClose}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!draft.days.length) {
-            setError('Choose at least one day. You can pause the habit if you need a break.');
-            return;
-          }
-          update((d) => {
-            const revision = { ...draft, from: today };
-            if (habit) {
-              const h = d.habits.find((h) => h.id === habit.id)!;
-              h.revisions = [...h.revisions.filter((r) => r.from < today), revision];
-            } else d.habits.push({ id: crypto.randomUUID(), revisions: [revision] });
-          });
-          onClose();
-        }}
-      >
-        <Field label="Habit name">
-          <input
-            required
-            maxLength={300}
-            autoFocus
-            value={draft.name}
-            onChange={(e) => patch({ name: e.target.value })}
-          />
-        </Field>
-        <Field label="Life area">
-          <CategorySelect value={draft.category} onChange={(category) => patch({ category })} />
-        </Field>
-        <Field label="Track as">
-          <select
-            value={draft.type}
-            onChange={(e) =>
-              patch({
-                type: e.target.value as HabitDefinition['type'],
-                target: e.target.value === 'check' ? 1 : draft.target,
-                unit: e.target.value === 'minutes' ? 'min' : draft.unit,
-              })
-            }
-          >
-            <option value="check">Yes / no</option>
-            <option value="count">Count</option>
-            <option value="minutes">Minutes</option>
-            <option value="number">Numeric measurement</option>
-          </select>
-        </Field>
-        {draft.type !== 'check' && (
-          <div className="form-grid">
-            <Field label="Target (at least)">
-              <input
-                required
-                type="number"
-                min="0.01"
-                step="any"
-                max="1000000"
-                value={draft.target}
-                onChange={(e) => patch({ target: Number(e.target.value) })}
-              />
-            </Field>
-            <Field label="Unit">
-              <input
-                maxLength={50}
-                value={draft.unit}
-                onChange={(e) => patch({ unit: e.target.value })}
-              />
-            </Field>
-          </div>
-        )}
-        <div className="field">
-          <span>Scheduled days</span>
-          <div className="day-picker">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((s, i) => (
-              <button
-                key={i}
-                type="button"
-                aria-label={
-                  ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i]
-                }
-                aria-pressed={draft.days.includes(i)}
-                className={draft.days.includes(i) ? 'selected' : ''}
-                onClick={() =>
-                  patch({
-                    days: draft.days.includes(i)
-                      ? draft.days.filter((d) => d !== i)
-                      : [...draft.days, i],
-                  })
-                }
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={draft.paused}
-            onChange={(e) => patch({ paused: e.target.checked })}
-          />
-          Pause this habit. It will be excluded from future scores.
-        </label>
-        <p className="muted small-text">
-          Changes apply from today. Earlier schedules and targets are preserved. Weekly habits recur
-          on the days you choose.
-        </p>
-        {error && (
-          <p className="error-text" role="alert">
-            {error}
-          </p>
-        )}
-        <FormActions onClose={onClose} />
-      </form>
-    </Modal>
-  );
-}
 export function HabitsView() {
   const { data, today } = useApp();
   const [edit, setEdit] = useState<Habit | null | undefined>(undefined);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState(today);
   const dates = weekDates(addDays(today, offset * 7));
-  const visible = data.habits.map((h) => ({ habit: h, def: definition(h, today)! }));
+  const visible = data.habits
+    .filter((h) => !h.archived)
+    .map((h) => ({ habit: h, def: definition(h, today)! }));
   return (
     <>
       <div className="page-title-row">
@@ -642,18 +511,22 @@ export function HabitsView() {
           <span>· Not scheduled</span>
         </div>
       </div>
-      <section className="card">
-        <div className="section-heading">
+      <section className="card" aria-label="Habits for selected day">
+        <div className="section-heading habit-list-heading">
           <div>
             <span className="eyebrow">LOG OR CORRECT A DAY</span>
             <h2>{dateLabel(selected, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
           </div>
-          <span className="tag">
-            {dayScore(data, selected).done} / {dayScore(data, selected).total} complete
-          </span>
+          <div className="habit-list-actions">
+            <span className="tag">
+              {dayScore(data, selected).done} / {dayScore(data, selected).total} complete
+            </span>
+            <NewHabitButton />
+            <RemovedHabitsButton />
+          </div>
         </div>
         {scheduled(data, selected).map((h) => (
-          <HabitRow key={h.id} habit={h} date={selected} />
+          <HabitRow key={h.id} habit={h} date={selected} showManagement={selected === today} />
         ))}
         {!scheduled(data, selected).length && (
           <p className="muted">No habits scheduled. A little breathing room.</p>
