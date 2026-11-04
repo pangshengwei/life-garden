@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { dateKey, definition, initialData, type GardenData } from './model';
 import { mirrorToObsidian } from './obsidian';
+import { backdateTrackingStart } from './tracking-start';
 export class ConflictError extends Error {}
 export function createStore(directory: string, vaultRoot?: string) {
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -18,7 +19,8 @@ export function createStore(directory: string, vaultRoot?: string) {
     CREATE TABLE IF NOT EXISTS goals (id TEXT PRIMARY KEY, title TEXT, category TEXT, status TEXT, current REAL, target REAL, unit TEXT, due TEXT, horizon TEXT, parent_id TEXT, archived INTEGER, notes TEXT);
     CREATE TABLE IF NOT EXISTS financial_snapshots (id TEXT PRIMARY KEY, date TEXT UNIQUE, liquid_including_srs REAL, accessible_excluding_srs REAL, net_worth REAL, securities REAL, investment_property_equity REAL, etf_percent REAL, annual_contributions REAL, notes TEXT);
     CREATE TABLE IF NOT EXISTS goal_events (id TEXT PRIMARY KEY, goal_id TEXT, date TEXT, title TEXT, category TEXT, previous REAL, current REAL, target REAL, unit TEXT, achieved INTEGER, was_achieved INTEGER);
-    CREATE TABLE IF NOT EXISTS focus_sessions (id TEXT PRIMARY KEY, date TEXT, seconds REAL, output TEXT, category TEXT);`);
+    CREATE TABLE IF NOT EXISTS focus_sessions (id TEXT PRIMARY KEY, date TEXT, seconds REAL, output TEXT, category TEXT);
+    CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY);`);
   // Existing databases predate reversible habit removal.
   const habitColumns = db.pragma('table_info(habits)') as Array<{ name: string }>;
   if (!habitColumns.some((column) => column.name === 'archived'))
@@ -162,6 +164,21 @@ export function createStore(directory: string, vaultRoot?: string) {
     // SQLite commits first: mirror failures never discard the durable app save.
     return { revision, mirrorError: mirror(data), mirrorPath, dbPath };
   }
+  // Existing installations already persisted a later start date. Apply this
+  // once, atomically with the relational projection and optimistic revision.
+  db.transaction(() => {
+    const migration = 'tracking-start-2026-11-01';
+    if (db.prepare('SELECT 1 FROM schema_migrations WHERE id=?').get(migration)) return;
+    const current = read();
+    if (backdateTrackingStart(current.data)) {
+      db.prepare('UPDATE app_state SET revision=?,json=? WHERE id=1').run(
+        current.revision + 1,
+        JSON.stringify(current.data),
+      );
+      relational(current.data);
+    }
+    db.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(migration);
+  })();
   return { read, save, mirror, dbPath, mirrorPath, close: () => db.close() };
 }
 let store: ReturnType<typeof createStore> | undefined;
