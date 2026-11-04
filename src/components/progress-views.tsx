@@ -18,6 +18,8 @@ import {
   dateLabel,
   dayScore,
   definition,
+  habitAvailability,
+  includeHabitOnDate,
   scheduled,
   totalXP,
   weekDates,
@@ -351,14 +353,20 @@ export function CategoryFilter() {
   );
 }
 export function HabitsView() {
-  const { data, today } = useApp();
+  const { data, today, update, notify } = useApp();
   const [edit, setEdit] = useState<Habit | null | undefined>(undefined);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState(today);
   const dates = weekDates(addDays(today, offset * 7));
   const visible = data.habits
-    .filter((h) => !h.archived)
-    .map((h) => ({ habit: h, def: definition(h, today)! }));
+    .filter((h) => !h.archived || habitAvailability(h, selected) === 'scheduled')
+    .map((h) => ({
+      habit: h,
+      def: definition(h, selected) || definition(h, today) || { ...h.revisions[0], id: h.id },
+    }));
+  const otherHabits = data.habits.filter(
+    (h) => !h.archived && habitAvailability(h, selected) !== 'scheduled',
+  );
   return (
     <>
       <div className="page-title-row">
@@ -410,6 +418,11 @@ export function HabitsView() {
             </button>
           </div>
         </div>
+        <p className="muted small-text">
+          Names and edit controls show the settings for{' '}
+          {dateLabel(selected, { weekday: 'long', day: 'numeric', month: 'short' })}. Select a day
+          to view or correct it.
+        </p>
         <p className="table-scroll-hint">Swipe the calendar to see the whole week.</p>
         <div
           className="table-scroll"
@@ -446,7 +459,10 @@ export function HabitsView() {
                       <CategoryIcon category={def.category} size={15} />
                       <span>
                         {def.name}
-                        {def.paused && <small>Paused</small>}
+                        {def.paused && <small>Paused on selected date</small>}
+                        {!definition(habit, selected) && (
+                          <small>Starts {dateLabel(habit.revisions[0].from)}</small>
+                        )}
                       </span>
                     </div>
                   </td>
@@ -521,19 +537,88 @@ export function HabitsView() {
             <span className="tag">
               {dayScore(data, selected).done} / {dayScore(data, selected).total} complete
             </span>
-            <NewHabitButton />
+            <NewHabitButton effectiveDate={selected} />
             <RemovedHabitsButton />
           </div>
         </div>
         {scheduled(data, selected).map((h) => (
-          <HabitRow key={h.id} habit={h} date={selected} showManagement={selected === today} />
+          <HabitRow key={h.id} habit={h} date={selected} />
         ))}
         {!scheduled(data, selected).length && (
           <p className="muted">No habits scheduled. A little breathing room.</p>
         )}
+        {otherHabits.length > 0 && (
+          <details className="other-habits" open>
+            <summary>Not scheduled on this day ({otherHabits.length})</summary>
+            <p className="muted">
+              Only scheduled habits appear above. Include any of these for this date, or edit its
+              start date and recurring schedule.
+            </p>
+            <ul>
+              {otherHabits.map((h) => {
+                const current = definition(h, today) || { ...h.revisions.at(-1)!, id: h.id };
+                const historical = definition(h, selected);
+                const status = habitAvailability(h, selected);
+                const reason =
+                  status === 'not-started'
+                    ? `Starts ${dateLabel(h.revisions[0].from)}`
+                    : status === 'paused'
+                      ? 'Paused on this date'
+                      : `Scheduled ${historical!.days.map((d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}`;
+                return (
+                  <li key={h.id}>
+                    <div>
+                      <strong>{current.name}</strong>
+                      <small>
+                        {reason}
+                        {current.from > selected
+                          ? ` · Current plan: ${current.paused ? 'paused' : current.days.map((d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')} from ${dateLabel(current.from)}`
+                          : ''}
+                        {historical && historical.name !== current.name
+                          ? ` · Name on this date: ${historical.name}`
+                          : ''}
+                      </small>
+                    </div>
+                    <div className="other-habit-actions">
+                      <button
+                        className="text-button"
+                        aria-label={'Edit schedule for ' + current.name}
+                        onClick={() => setEdit(h)}
+                      >
+                        Edit schedule
+                      </button>
+                      <button
+                        className="button secondary"
+                        aria-label={'Add ' + current.name + ' to ' + selected}
+                        onClick={() => {
+                          update((d) =>
+                            includeHabitOnDate(
+                              d.habits.find((x) => x.id === h.id)!,
+                              selected,
+                              today,
+                            ),
+                          );
+                          notify(
+                            `Habit added to ${dateLabel(selected)} only. Recurring schedule unchanged.`,
+                          );
+                        }}
+                      >
+                        Add to this day
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        )}
       </section>
       {edit !== undefined && (
-        <HabitEditor habit={edit || undefined} onClose={() => setEdit(undefined)} />
+        <HabitEditor
+          habit={edit || undefined}
+          effectiveDate={selected}
+          onClose={() => setEdit(undefined)}
+        />
       )}
     </>
   );

@@ -5,7 +5,7 @@ The app was built and exercised on this Mac using a separate QA SQLite directory
 ## Automated checks
 
 - `npm run typecheck`: TypeScript validation.
-- `npm test`: sixteen domain/storage tests. These cover Singapore date rollover, empty activity seeds, recovery-day scoring, historical habit schedules, numeric completion thresholds and capped focus XP, invalid backup rejection, durable SQLite reopen, relational table projections, concurrent revision rejection, Obsidian habit properties/annotation preservation, safe SQLite commits when the mirror fails, rolling 30-day denominators and thresholds, corrected goal-event aggregation, and persisted dated goal history.
+- `npm test`: twenty-two domain/storage tests. These cover Singapore date rollover, empty activity seeds, recovery-day scoring, historical habit schedules, numeric completion thresholds and capped focus XP, invalid backup rejection, durable SQLite reopen, relational table projections, concurrent revision rejection, Obsidian habit properties/annotation preservation, safe SQLite commits when the mirror fails, rolling 30-day denominators and thresholds, corrected goal-event aggregation, and persisted dated goal history.
 - `npm run build`: optimized Next.js build, including the local route handler. No build warnings after the explicit dynamic-path tracing opt-out.
 
 ## Browser checks
@@ -34,6 +34,12 @@ The board and day-detail modal also worked at 390 CSS pixels with no document-le
 ## Habit management
 
 Created a habit directly from the selected-day list, renamed it with its pencil control, removed it with its trash control, and restored it from Removed habits in a separate test database. Removal and restoration persisted through refresh, with no browser console errors. The Today list exposes the same controls. Added tests cover earlier-name/log preservation, an excluded removal interval followed by restoration, and migration of an existing SQLite habits table without data loss. Removed habits also carry their archived state into the Obsidian mirror.
+
+## Historical habit corrections
+
+A separate fixture reproduced a weekly habit changed to Tuesday starting on a Wednesday. Selected the earlier Tuesday, edited an earlier habit’s name, and verified the current Wednesday name/completion were preserved. Added the off-schedule weekly habit to that Tuesday, logged its numeric target, refreshed, and verified the historical completion remained. One-day revisions restore the following day and preserve explicit future revisions. Native date input events are handled directly so editing the effective date updates the form immediately.
+
+The missing-habit section explains paused, not-started and weekday exclusions, and provides an explicit one-day inclusion action. The empty-state component now has its own CSS class so empty heatmap buttons and the legend no longer inherit the empty-state padding.
 
 ## Boundaries
 

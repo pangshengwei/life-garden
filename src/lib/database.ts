@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
-import { dateKey, initialData, type GardenData } from './model';
+import { dateKey, definition, initialData, type GardenData } from './model';
 import { mirrorToObsidian } from './obsidian';
 export class ConflictError extends Error {}
 export function createStore(directory: string, vaultRoot?: string) {
@@ -60,7 +60,7 @@ export function createStore(directory: string, vaultRoot?: string) {
       'INSERT INTO habits (id,name,category,type,target,paused,revisions_json,archived) VALUES (?,?,?,?,?,?,?,?)',
     );
     for (const h of data.habits) {
-      const r = h.revisions.at(-1)!;
+      const r = definition(h, dateKey()) || h.revisions[0];
       habitInsert.run(
         h.id,
         r.name,

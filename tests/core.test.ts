@@ -110,6 +110,9 @@ test('SQLite survives reopen, protects conflicting writers, and mirrors annotati
   let store = createStore(dir);
   try {
     const first = store.read();
+    // This historical fixture must not depend on the real date the test is run.
+    first.data.startedOn = today;
+    for (const habit of first.data.habits) habit.revisions[0].from = today;
     first.data.days[today] = {
       ...emptyDay(),
       priority: 'A persistent intention',

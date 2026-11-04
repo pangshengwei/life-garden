@@ -183,16 +183,50 @@ export function definition(habit: Habit, date: string): HabitDefinition | undefi
   const revision = habit.revisions.filter((r) => r.from <= date).at(-1);
   return revision ? { ...revision, id: habit.id } : undefined;
 }
-/** Change a habit from a date onward without rewriting earlier schedules or names. */
-export function reviseHabit(habit: Habit, revision: HabitRevision, date: string) {
-  habit.revisions = [...habit.revisions.filter((r) => r.from < date), { ...revision, from: date }];
+export type HabitEditScope = 'onward' | 'day';
+/** Insert a dated change while preserving subsequent, explicitly saved revisions. */
+export function reviseHabit(
+  habit: Habit,
+  revision: HabitRevision,
+  date: string,
+  scope: HabitEditScope = 'onward',
+) {
+  const nextDate = addDays(date, 1);
+  const nextDefinition = definition(habit, nextDate);
+  const restoreNextDay = scope === 'day' && !habit.revisions.some((r) => r.from === nextDate);
+  const revisions = habit.revisions.filter((r) => r.from !== date);
+  revisions.push({ ...revision, from: date });
+  if (restoreNextDay)
+    revisions.push({ ...(nextDefinition || { ...revision, paused: true }), from: nextDate });
+  habit.revisions = revisions.sort((a, b) => a.from.localeCompare(b.from));
 }
-/** Removal is reversible; a paused revision keeps removed dates out of habit scores. */
-export function setHabitArchived(habit: Habit, archived: boolean, date: string) {
+/** A historical one-day removal must not archive the current habit. */
+export function setHabitArchived(
+  habit: Habit,
+  archived: boolean,
+  date: string,
+  scope: HabitEditScope = 'onward',
+) {
   const current = definition(habit, date);
   if (!current) throw new Error('This habit has no definition for the selected date.');
-  reviseHabit(habit, { ...current, paused: archived }, date);
-  habit.archived = archived;
+  reviseHabit(habit, { ...current, paused: archived }, date, scope);
+  if (scope === 'onward' && !habit.revisions.some((r) => r.from > date)) habit.archived = archived;
+}
+/** Explicitly include current habit settings on one date, without changing its recurring plan. */
+export function includeHabitOnDate(habit: Habit, date: string, sourceDate: string) {
+  const source = definition(habit, sourceDate) || habit.revisions.at(-1)!;
+  reviseHabit(
+    habit,
+    { ...source, paused: false, days: [...new Set([...source.days, weekday(date)])] },
+    date,
+    'day',
+  );
+}
+export function habitAvailability(habit: Habit, date: string) {
+  const current = definition(habit, date);
+  if (!current) return 'not-started' as const;
+  if (current.paused) return 'paused' as const;
+  return current.days.includes(weekday(date)) ? ('scheduled' as const) : ('off-day' as const);
 }
 export function scheduled(data: GardenData, date: string): HabitDefinition[] {
   return data.habits

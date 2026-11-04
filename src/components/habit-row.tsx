@@ -22,7 +22,7 @@ export function HabitRow({
   const { data, update, notify, today } = useApp();
   const [editing, setEditing] = useState(false);
   const source = data.habits.find((h) => h.id === habit.id);
-  const managed = showManagement && !!source && !source.archived;
+  const managed = showManagement && !!source && (!source.archived || date < today);
   const val = data.days[date]?.logs[habit.id];
   const done = completed(habit, val);
   const [entry, setEntry] = useState(false);
@@ -86,16 +86,23 @@ export function HabitRow({
               <button
                 className="icon-button remove-habit-button"
                 aria-label={'Remove ' + habit.name}
-                title="Remove habit from today onward"
+                title={
+                  date < today ? 'Remove habit for this day only' : 'Remove habit from today onward'
+                }
                 onClick={() => {
                   update((d) =>
                     setHabitArchived(
                       d.habits.find((h) => h.id === habit.id)!,
                       true,
-                      today,
+                      date,
+                      date < today ? 'day' : 'onward',
                     ),
                   );
-                  notify('Habit removed. You can restore it from Removed habits.');
+                  notify(
+                    date < today
+                      ? 'Habit removed for this day only. Other dates are unchanged.'
+                      : 'Habit removed. You can restore it from Removed habits.',
+                  );
                 }}
               >
                 <Trash2 size={15} />
@@ -104,7 +111,9 @@ export function HabitRow({
           )}
         </div>
       </div>
-      {editing && source && <HabitEditor habit={source} onClose={() => setEditing(false)} />}
+      {editing && source && (
+        <HabitEditor habit={source} effectiveDate={date} onClose={() => setEditing(false)} />
+      )}
       {entry && (
         <Modal title={'Log ' + habit.name} onClose={() => setEntry(false)}>
           <form

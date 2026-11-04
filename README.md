@@ -76,7 +76,7 @@ Optionally relocate all private app data with `LIFE_GARDEN_DATA_DIR` (absolute p
 
 - Today: Singapore date/time, one priority and first step, plan tomorrow, quick journal, mood and energy, scheduled habits, and bedtime intentions.
 - Focus: 25/60/90-minute sessions, pause/resume, focus mode, persisted deadlines, and outcome notes on completion or early finish.
-- Habits: create, rename/edit, remove and restore directly from the daily list; yes/no, counts, minutes and numeric targets; editable weekdays; pause; weekly history; historical corrections; excused recovery days. Edits and removal apply from today, leaving earlier schedules and logs intact. Removal is reversible through **Removed habits**; restoring resumes the habit from today without backfilling the removed period.
+- Habits: create, rename/edit, remove and restore directly from the daily list; yes/no, counts, minutes and numeric targets; editable weekdays; pause; weekly history; historical corrections; excused recovery days. Choose the effective date when creating or editing a habit. Past-date edits default to **Only this day**; **From this date onward** applies until the next saved change. Later saved revisions are preserved. Historical removal affects that date only. Current removal is reversible through **Removed habits**.
 - Goals: annual/quarterly/monthly/weekly horizons, qualitative 0/1 outcomes, numeric progress, dependencies, due dates, status, editing and archive/restore.
 - Garden: six life areas, related goals/habits, outcome progress, activity counts, XP, levels and an original animated plant.
 - Journal: calendar browsing, morning notes, evening prompts, editable weekly reflections, tomorrow planning and actual overnight sleep records on the wake-up date.
@@ -85,6 +85,14 @@ Optionally relocate all private app data with `LIFE_GARDEN_DATA_DIR` (absolute p
 - Responsive layout, light/dark themes, keyboard labels, native modal focus containment and reduced-motion support.
 
 Fresh clones start with generic aspirational goals, configurable habits, and no financial snapshots or completed activity. Your personal balances, employer/project context, name, journal notes and exported backups belong in the ignored local data directory, not the published source. Existing local databases keep their personal goals and snapshots when the app is upgraded. Financial goals and snapshots are edited independently so an old snapshot cannot silently overwrite a newer goal update.
+
+## Correct a past day or find a missing habit
+
+Select a date in the weekly habit calendar. Row labels and pencil controls use that date’s saved settings. You can edit historical names, targets and schedules; the editor shows an effective date and whether the change is for one day or from that date onward. **Use today’s name, target and schedule** copies the current settings into a historical correction without silently applying them to other days.
+
+The daily list includes scheduled, unpaused habits that have already started on the selected date. **Not scheduled on this day** lists the other habits and explains whether they are on another weekday, paused, or not yet started. **Add to this day** explicitly uses the current habit settings for that one date and preserves the normal recurring plan. No completion is invented; log the actual result afterward.
+
+A Tuesday habit starting on a Wednesday does not automatically backfill the previous Tuesday. Use an earlier start date or **Add to this day** when that is what you intend.
 
 ## Scores and interpretation
 

@@ -3,18 +3,33 @@ import { useState } from 'react';
 import { Plus, RotateCcw } from 'lucide-react';
 import {
   definition,
+  dateLabel,
+  addDays,
+  type HabitEditScope,
   reviseHabit,
   setHabitArchived,
   type Habit,
   type HabitDefinition,
 } from '@/lib/model';
 import { CategorySelect, Empty, Field, FormActions, Modal, useApp } from './ui';
-export function HabitEditor({ habit, onClose }: { habit?: Habit; onClose: () => void }) {
-  const { update, today, notify } = useApp();
-  const current = habit ? definition(habit, today) : null;
+export function HabitEditor({
+  habit,
+  onClose,
+  effectiveDate,
+}: {
+  habit?: Habit;
+  onClose: () => void;
+  effectiveDate?: string;
+}) {
+  const { data, update, today, notify } = useApp();
+  const [date, setDate] = useState(effectiveDate || today);
+  const [scope, setScope] = useState<HabitEditScope>(habit && date < today ? 'day' : 'onward');
+  const current = habit
+    ? definition(habit, date) || definition(habit, today) || habit.revisions[0]
+    : null;
   const [draft, setDraft] = useState<Omit<HabitDefinition, 'id'>>(
     current || {
-      from: today,
+      from: date,
       name: '',
       category: 'health',
       days: [0, 1, 2, 3, 4, 5, 6],
@@ -40,20 +55,67 @@ export function HabitEditor({ habit, onClose }: { habit?: Habit; onClose: () => 
             return;
           }
           update((d) => {
-            const revision = { ...draft, name: draft.name.trim(), from: today };
+            const revision = { ...draft, name: draft.name.trim(), from: date };
             if (habit) {
               const h = d.habits.find((h) => h.id === habit.id)!;
-              reviseHabit(h, revision, today);
-            } else d.habits.push({ id: crypto.randomUUID(), revisions: [revision] });
+              reviseHabit(h, revision, date, scope);
+            } else {
+              const added: Habit = { id: crypto.randomUUID(), revisions: [revision] };
+              if (scope === 'day')
+                added.revisions.push({ ...revision, from: addDays(date, 1), paused: true });
+              d.habits.push(added);
+            }
           });
           notify(
-            habit
-              ? 'Habit updated. Earlier days keep their history.'
-              : 'A new little habit, ready to grow.',
+            scope === 'day'
+              ? `Habit saved for ${dateLabel(date)} only.`
+              : `Habit saved from ${dateLabel(date)}. Later saved changes are kept.`,
           );
           onClose();
         }}
       >
+        <div className="habit-edit-date-context">
+          <strong>
+            {habit ? 'Editing' : 'Creating for'}{' '}
+            {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}
+          </strong>
+          <p>Choose when this change applies.</p>
+        </div>
+        <div className="form-grid">
+          <Field label={scope === 'day' ? 'Apply on' : 'Start date'}>
+            <input
+              type="date"
+              required
+              min={data.startedOn}
+              max={today}
+              value={date}
+              onInput={(e) => {
+                if (e.currentTarget.value) setDate(e.currentTarget.value);
+              }}
+              onChange={(e) => {
+                if (e.target.value) setDate(e.target.value);
+              }}
+            />
+          </Field>
+          <Field label="Apply changes">
+            <select value={scope} onChange={(e) => setScope(e.target.value as HabitEditScope)}>
+              <option value="day">Only this day</option>
+              <option value="onward">From this date onward</option>
+            </select>
+          </Field>
+        </div>
+        {habit && date < today && (
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => {
+              const latest = definition(habit, today) || habit.revisions.at(-1)!;
+              setDraft({ ...latest, from: date });
+            }}
+          >
+            Use today’s name, target and schedule
+          </button>
+        )}
         <Field label="Habit name">
           <input
             required
@@ -136,11 +198,15 @@ export function HabitEditor({ habit, onClose }: { habit?: Habit; onClose: () => 
             checked={draft.paused}
             onChange={(e) => patch({ paused: e.target.checked })}
           />
-          Pause this habit. It will be excluded from future scores.
+          {scope === 'day'
+            ? 'Pause this habit on this date. Excluded from that day’s score.'
+            : 'Pause this habit from this date. Excluded while paused.'}
         </label>
         <p className="muted small-text">
-          Changes apply from today. Earlier schedules and targets are preserved. Weekly habits recur
-          on the days you choose.
+          {scope === 'day'
+            ? 'This edits only the chosen date. Other dates keep their saved settings.'
+            : 'This applies until the next saved change, if any. Earlier dates and later saved changes are preserved.'}{' '}
+          Weekly habits recur on the days you choose.
         </p>
         {error && (
           <p className="error-text" role="alert">
@@ -153,7 +219,7 @@ export function HabitEditor({ habit, onClose }: { habit?: Habit; onClose: () => 
   );
 }
 
-export function NewHabitButton() {
+export function NewHabitButton({ effectiveDate }: { effectiveDate?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -161,7 +227,7 @@ export function NewHabitButton() {
         <Plus size={15} />
         New habit
       </button>
-      {open && <HabitEditor onClose={() => setOpen(false)} />}
+      {open && <HabitEditor effectiveDate={effectiveDate} onClose={() => setOpen(false)} />}
     </>
   );
 }

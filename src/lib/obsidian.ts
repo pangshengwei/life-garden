@@ -1,6 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { categories, completed, dayScore, definition, scheduled, type GardenData } from './model';
+import {
+  categories,
+  completed,
+  dateKey,
+  dayScore,
+  definition,
+  scheduled,
+  type GardenData,
+} from './model';
 const end = '<!-- /life-garden:generated -->';
 const q = (value: unknown) => JSON.stringify(value);
 export function mirrorToObsidian(data: GardenData, root: string) {
@@ -55,13 +63,13 @@ export function mirrorToObsidian(data: GardenData, root: string) {
         .map((g) => `- [[LG-goal-${g.id}|${g.title}]]`)
         .join('\n')}\n\n## Habits\n${data.habits
         .filter((h) => !h.archived)
-        .map((h) => definition(h, '9999-12-31'))
+        .map((h) => definition(h, dateKey()) || { ...h.revisions[0], id: h.id })
         .filter((h) => h?.category === c.id)
         .map((h) => `- ${h!.name}`)
         .join('\n')}`,
     );
   for (const habit of data.habits) {
-    const h = definition(habit, '9999-12-31')!;
+    const h = definition(habit, dateKey()) || { ...habit.revisions[0], id: habit.id };
     note(
       `Habits/LG-habit-${habit.id}`,
       {

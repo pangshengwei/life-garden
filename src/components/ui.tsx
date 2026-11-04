@@ -100,7 +100,7 @@ export function Modal({
 }
 export function Empty({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="empty">
+    <div className="empty-state">
       <Sprout size={28} />
       <h3>{title}</h3>
       <p>{children}</p>

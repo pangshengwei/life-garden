@@ -9,6 +9,8 @@ import {
   definition,
   emptyDay,
   initialData,
+  includeHabitOnDate,
+  habitAvailability,
   reviseHabit,
   scheduled,
   setHabitArchived,
@@ -102,4 +104,71 @@ test('existing SQLite databases migrate habit removal without losing rows and mi
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('backdated revisions preserve explicit later edits instead of discarding them', () => {
+  const d = initialData('2026-11-03'),
+    h = d.habits[0];
+  reviseHabit(h, { ...h.revisions[0], name: 'Current name' }, '2026-11-04');
+  reviseHabit(h, { ...h.revisions[0], name: 'Corrected earlier name' }, '2026-11-03');
+  assert.equal(definition(h, '2026-11-03')?.name, 'Corrected earlier name');
+  assert.equal(definition(h, '2026-11-04')?.name, 'Current name');
+  assert.equal(h.revisions.length, 2);
+  assert.equal(dataSchema.safeParse(d).success, true);
+});
+test('one-day historical corrections restore the next day and retain later scheduled changes', () => {
+  const d = initialData('2026-11-01'),
+    h = d.habits[0];
+  reviseHabit(h, { ...h.revisions[0], name: 'Next week name' }, '2026-11-08');
+  reviseHabit(h, { ...h.revisions[0], name: 'One-day correction', target: 2 }, '2026-11-03', 'day');
+  assert.equal(definition(h, '2026-11-02')?.name, 'Sufficient sleep');
+  assert.equal(definition(h, '2026-11-03')?.target, 2);
+  assert.equal(definition(h, '2026-11-04')?.target, 1);
+  assert.equal(definition(h, '2026-11-08')?.name, 'Next week name');
+  assert.equal(dataSchema.safeParse(d).success, true);
+});
+test('including a current weekly plan on an earlier date does not rewrite the recurring schedule', () => {
+  const d = initialData('2026-11-03'),
+    h = d.habits.find((h) => h.id === 'cardio')!;
+  reviseHabit(h, { ...h.revisions[0], name: 'Zone 2 cardio', days: [2], target: 60 }, '2026-11-04');
+  assert.equal(habitAvailability(h, '2026-11-03'), 'off-day');
+  assert.equal(habitAvailability(h, '2026-11-04'), 'off-day');
+  includeHabitOnDate(h, '2026-11-03', '2026-11-04');
+  assert.equal(habitAvailability(h, '2026-11-03'), 'scheduled');
+  assert.equal(definition(h, '2026-11-03')?.name, 'Zone 2 cardio');
+  assert.equal(definition(h, '2026-11-03')?.target, 60);
+  assert.deepEqual(definition(h, '2026-11-04')?.days, [2]);
+  assert.equal(habitAvailability(h, '2026-11-04'), 'off-day');
+  assert.equal(dataSchema.safeParse(d).success, true);
+});
+test('adding a not-yet-started habit to a historical date restores the gap before its start', () => {
+  const d = initialData('2026-11-01'),
+    h = d.habits[0];
+  h.revisions[0].from = '2026-11-08';
+  assert.equal(habitAvailability(h, '2026-11-03'), 'not-started');
+  includeHabitOnDate(h, '2026-11-03', '2026-11-08');
+  assert.equal(habitAvailability(h, '2026-11-03'), 'scheduled');
+  assert.equal(habitAvailability(h, '2026-11-04'), 'paused');
+  assert.equal(habitAvailability(h, '2026-11-08'), 'scheduled');
+  assert.equal(dataSchema.safeParse(d).success, true);
+});
+test('removing a habit for a past date does not archive or pause the current habit', () => {
+  const d = initialData('2026-11-01'),
+    h = d.habits[0];
+  setHabitArchived(h, true, '2026-11-03', 'day');
+  assert.equal(!!h.archived, false);
+  assert.equal(habitAvailability(h, '2026-11-03'), 'paused');
+  assert.equal(habitAvailability(h, '2026-11-04'), 'scheduled');
+});
+test('a one-day edit immediately before an existing revision does not replace that revision', () => {
+  const d = initialData('2026-11-01'),
+    h = d.habits[0];
+  reviseHabit(h, { ...h.revisions[0], target: 7, name: 'New current settings' }, '2026-11-04');
+  const next = structuredClone(h.revisions[1]);
+  reviseHabit(h, { ...h.revisions[0], target: 2 }, '2026-11-03', 'day');
+  assert.deepEqual(
+    h.revisions.find((r) => r.from === '2026-11-04'),
+    next,
+  );
+  assert.equal(definition(h, '2026-11-03')?.target, 2);
 });
