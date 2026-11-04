@@ -1,16 +1,13 @@
 import { ConflictError, getStore } from '@/lib/database';
 import { dataSchema } from '@/lib/validation';
+import { accessError, isHosted, sameOrigin } from '@/lib/access';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-function allowed(request: Request) {
-  const url = new URL(request.url);
-  const host = request.headers.get('host') || url.host;
-  if (!/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host)) return false;
-  const origin = request.headers.get('origin');
-  return !origin || origin === `${url.protocol}//${host}`;
-}
 export async function GET(request: Request) {
-  if (!allowed(request)) return Response.json({ error: 'Local access only.' }, { status: 403 });
+  const denied = accessError(request);
+  if (denied) return denied;
+  if (!sameOrigin(request))
+    return Response.json({ error: 'Same-origin access required.' }, { status: 403 });
   try {
     const store = getStore();
     const current = store.read();
@@ -20,15 +17,19 @@ export async function GET(request: Request) {
         mirrorError: store.mirror(current.data),
         mirrorPath: store.mirrorPath,
         dbPath: store.dbPath,
+        hosted: isHosted(),
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch {
-    return Response.json({ error: 'Could not open your local database.' }, { status: 500 });
+    return Response.json({ error: 'Could not open your database.' }, { status: 500 });
   }
 }
 export async function PUT(request: Request) {
-  if (!allowed(request)) return Response.json({ error: 'Local access only.' }, { status: 403 });
+  const denied = accessError(request);
+  if (denied) return denied;
+  if (!sameOrigin(request))
+    return Response.json({ error: 'Same-origin access required.' }, { status: 403 });
   if (!request.headers.get('content-type')?.includes('application/json'))
     return Response.json({ error: 'JSON required.' }, { status: 415 });
   try {

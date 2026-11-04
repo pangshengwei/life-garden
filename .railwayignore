@@ -1,0 +1,11 @@
+.git/
+node_modules/
+.next/
+data/
+.env*
+.deployment-access.json
+*.sqlite*
+*.db*
+life-garden-*.json
+test-results/
+playwright-report/

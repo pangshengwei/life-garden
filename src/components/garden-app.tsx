@@ -128,7 +128,7 @@ export function GardenApp() {
               <strong>Your personal space</strong>
               <small>
                 <span className="status-dot" />
-                SQLite · on this Mac
+                {garden.hosted ? 'Private · hosted on Railway' : 'SQLite · on this Mac'}
               </small>
             </div>
           </div>

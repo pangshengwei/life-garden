@@ -7,6 +7,8 @@ export function useGarden() {
   const [error, setError] = useState('');
   const [paths, setPaths] = useState({ dbPath: '', mirrorPath: '' });
   const [mirrorError, setMirrorError] = useState('');
+  const [hosted, setHosted] = useState(false);
+  const hostedRef = useRef(false);
   const live = useRef<GardenData | null>(null),
     saved = useRef<GardenData | null>(null),
     revision = useRef(0),
@@ -35,7 +37,7 @@ export function useGarden() {
         setMirrorError(result.mirrorError || '');
       }
       setError('');
-      setStatus('Saved locally');
+      setStatus(hostedRef.current ? 'Saved securely' : 'Saved locally');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');
       setStatus('Unsaved changes');
@@ -55,7 +57,9 @@ export function useGarden() {
           setData(result.data);
           setPaths(result);
           setMirrorError(result.mirrorError || '');
-          setStatus('Saved locally');
+          hostedRef.current = Boolean(result.hosted);
+          setHosted(hostedRef.current);
+          setStatus(hostedRef.current ? 'Saved securely' : 'Saved locally');
         }
       })
       .catch((e) => {
@@ -98,5 +102,5 @@ export function useGarden() {
       }),
     [update],
   );
-  return { data, update, updateDay, status, error, paths, mirrorError, retry: sync };
+  return { data, update, updateDay, status, error, paths, mirrorError, hosted, retry: sync };
 }

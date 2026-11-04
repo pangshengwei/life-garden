@@ -24,7 +24,32 @@ npm run build
 npm start
 ```
 
-The server binds to loopback and the data API accepts local, same-origin requests. This first version is for this Mac. Phone access and hosted access need a later authenticated deployment; a responsive layout alone does not provide cross-device sync.
+Local mode binds to loopback and the data API accepts local, same-origin requests. For authenticated web and phone access, use the Railway deployment below.
+
+## Deploy privately on Railway
+
+The hosted app is a **single-owner garden**, protected by browser HTTP Basic authentication over HTTPS. The page and data API both require authentication. It does not provide separate accounts or per-user data isolation; only share credentials with someone who should have full access to your garden.
+
+1. Run `npm run create-hosted-access` once. This creates `.deployment-access.json` with a cryptographically random 256-bit password and its SHA-256 hash. The file has owner-only permissions and is excluded from Git and Railway uploads. Store the password in your password manager. Use a newly generated password for rotation; a fast SHA-256 hash is appropriate here only because the password is random and high entropy, not human-chosen.
+2. Create a Railway service for this repository and attach a persistent volume at `/data`. Keep **one replica**. SQLite and the generated Markdown mirror live on this volume; the container filesystem is otherwise disposable. Enable volume backups in Railway and retain periodic JSON exports.
+3. Generate an HTTPS Railway domain and set these server variables before deploying:
+
+   | Variable | Value |
+   | --- | --- |
+   | `LIFE_GARDEN_HOSTED` | `1` |
+   | `LIFE_GARDEN_DATA_DIR` | `/data` (must match the volume mount) |
+   | `LIFE_GARDEN_USERNAME` | `username` from the private access file |
+   | `LIFE_GARDEN_PASSWORD_SHA256` | `passwordSha256` from the private access file |
+   | `LIFE_GARDEN_ORIGIN` | exact HTTPS origin, with no trailing slash |
+   | `PORT` | `3000` |
+
+   Do not upload the plaintext password, `.env` files, or private data to GitHub. Do not prefix any credential variable with `NEXT_PUBLIC_`. Railway holds only the password hash; you may additionally seal the hash variable in its dashboard. No paid external API credentials are required.
+4. Deploy. `railway.json` defines the build, startup and `/api/health` checks. Startup fails when required hosted settings or the Railway volume are missing. Remote access never falls back to local mode on Railway. The health endpoint returns only availability; it exposes no garden data.
+5. Visit the HTTPS domain and enter your username and password in the browser's login prompt. The browser remembers Basic authentication for its session; close the browser or clear its site data to end access on a shared device. Changing the hash invalidates the old password after redeployment.
+
+The first cloud deployment starts a **new garden**. To migrate existing records, export JSON from your old installation and restore it in the hosted app after signing in. Review the destination before importing sensitive data. The local and cloud databases are separate; changes do not merge automatically. The hosted Obsidian mirror is stored on Railway, not in your Mac's vault. Use Railway volume download tools if you want a copy of that Markdown locally.
+
+See [Railway volumes](https://docs.railway.com/volumes) and [sealed variables](https://docs.railway.com/variables#sealed-variables) for persistence and secret settings.
 
 ## Your data
 

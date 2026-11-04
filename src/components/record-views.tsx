@@ -900,7 +900,7 @@ export function InsightsView() {
   );
 }
 export function SettingsView() {
-  const { data, update, status, paths, mirrorError, notify, today } = useApp();
+  const { data, update, status, paths, mirrorError, hosted, notify, today } = useApp();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<typeof data | null>(null);
   const [error, setError] = useState('');
@@ -919,13 +919,14 @@ export function SettingsView() {
           <div className="section-heading">
             <h2>
               <Database size={20} />
-              Local SQLite
+              {hosted ? 'Persistent SQLite' : 'Local SQLite'}
             </h2>
             <span className="tag sage">{status}</span>
           </div>
           <p>
-            Your garden lives on this Mac. Every save is a SQLite transaction, with revision checks
-            to protect against conflicting browser tabs.
+            Your garden lives {hosted ? 'on your private Railway volume' : 'on this Mac'}. Every
+            save is a SQLite transaction, with revision checks to protect against conflicting
+            browser tabs.
           </p>
           <code className="path-display">{paths.dbPath}</code>
           <p className="muted small-text">
@@ -951,9 +952,9 @@ export function SettingsView() {
             notes section.
           </p>
           <p className="muted small-text">
-            Set OBSIDIAN_VAULT_PATH in .env.local to your vault’s absolute path, then restart the
-            server. Life Garden uses its own subfolder. SQLite stays the source of truth; edits to
-            generated Markdown don’t sync back.
+            {hosted
+              ? 'This mirror is stored on Railway. It does not automatically sync to an Obsidian vault on your Mac. SQLite stays the source of truth.'
+              : 'Set OBSIDIAN_VAULT_PATH in .env.local to your vault’s absolute path, then restart the server. Life Garden uses its own subfolder. SQLite stays the source of truth; edits to generated Markdown don’t sync back.'}
           </p>
         </section>
         <section className="card">
@@ -962,7 +963,7 @@ export function SettingsView() {
             Back up your garden
           </h2>
           <p className="muted">
-            Download a complete JSON backup before restoring data or moving Macs.
+            Download a complete JSON backup before restoring data or moving between installations.
           </p>
           <div className="stack-actions">
             <button
