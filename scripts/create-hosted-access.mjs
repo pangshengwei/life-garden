@@ -1,12 +1,19 @@
-import { randomBytes, createHash } from 'node:crypto';
+import { randomBytes, scryptSync } from 'node:crypto';
 import fs from 'node:fs';
 
 // Keep the plaintext password on the owner's Mac, never in Git or build context.
 const password = randomBytes(32).toString('base64url');
+const salt = randomBytes(16);
 const credentials = {
   username: 'garden',
   password,
-  passwordSha256: createHash('sha256').update(password).digest('hex'),
+  passwordScrypt:
+    salt.toString('hex') +
+    ':' +
+    scryptSync(password, salt, 64, {
+      N: 32768,
+      maxmem: 64 * 1024 * 1024,
+    }).toString('hex'),
 };
 fs.writeFileSync('.deployment-access.json', JSON.stringify(credentials, null, 2) + '\n', {
   mode: 0o600,

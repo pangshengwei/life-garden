@@ -6,7 +6,9 @@ if (hosted) {
   const env = process.env;
   if (
     !env.LIFE_GARDEN_USERNAME ||
-    !/^[a-f0-9]{64}$/.test(env.LIFE_GARDEN_PASSWORD_SHA256 || '') ||
+    !(env.LIFE_GARDEN_PASSWORD_SCRYPT
+      ? /^[a-f0-9]{32}:[a-f0-9]{128}$/.test(env.LIFE_GARDEN_PASSWORD_SCRYPT)
+      : /^[a-f0-9]{64}$/.test(env.LIFE_GARDEN_PASSWORD_SHA256 || '')) ||
     !env.LIFE_GARDEN_ORIGIN?.startsWith('https://') ||
     !env.LIFE_GARDEN_DATA_DIR ||
     !path.isAbsolute(env.LIFE_GARDEN_DATA_DIR)

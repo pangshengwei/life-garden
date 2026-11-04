@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, scryptSync, timingSafeEqual } from 'node:crypto';
 
 type Environment = Record<string, string | undefined>;
 export function isHosted(env: Environment = process.env) {
@@ -9,8 +9,12 @@ export function hostedConfigurationError(env: Environment = process.env) {
   if (!isHosted(env)) return null;
   if (!env.LIFE_GARDEN_USERNAME || !/^[A-Za-z0-9_.-]{1,80}$/.test(env.LIFE_GARDEN_USERNAME))
     return 'Configure a valid LIFE_GARDEN_USERNAME.';
-  if (!/^[a-f0-9]{64}$/.test(env.LIFE_GARDEN_PASSWORD_SHA256 || ''))
-    return 'Configure LIFE_GARDEN_PASSWORD_SHA256 using a generated random password.';
+  if (env.LIFE_GARDEN_PASSWORD_SCRYPT) {
+    if (!/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(env.LIFE_GARDEN_PASSWORD_SCRYPT))
+      return 'Configure a valid LIFE_GARDEN_PASSWORD_SCRYPT.';
+  } else if (!/^[a-f0-9]{64}$/.test(env.LIFE_GARDEN_PASSWORD_SHA256 || '')) {
+    return 'Configure LIFE_GARDEN_PASSWORD_SCRYPT.';
+  }
   try {
     const url = new URL(env.LIFE_GARDEN_ORIGIN || '');
     if (url.protocol !== 'https:' || url.origin !== env.LIFE_GARDEN_ORIGIN)
@@ -44,10 +48,20 @@ export function accessError(request: Request, env: Environment = process.env): R
     const username = credentials.slice(0, separator);
     const password = credentials.slice(separator + 1);
     const userMatches = timingSafeEqual(digest(username), digest(env.LIFE_GARDEN_USERNAME!));
-    const passwordMatches = timingSafeEqual(
-      digest(password),
-      Buffer.from(env.LIFE_GARDEN_PASSWORD_SHA256!, 'hex'),
-    );
+    let passwordMatches: boolean;
+    if (env.LIFE_GARDEN_PASSWORD_SCRYPT) {
+      const [salt, hash] = env.LIFE_GARDEN_PASSWORD_SCRYPT.split(':');
+      passwordMatches = timingSafeEqual(
+        scryptSync(password, Buffer.from(salt, 'hex'), 64, { N: 32768, maxmem: 64 * 1024 * 1024 }),
+        Buffer.from(hash, 'hex'),
+      );
+    } else {
+      // Compatibility for existing deployments using a generated 256-bit password.
+      passwordMatches = timingSafeEqual(
+        digest(password),
+        Buffer.from(env.LIFE_GARDEN_PASSWORD_SHA256!, 'hex'),
+      );
+    }
     if (separator > 0 && userMatches && passwordMatches) return null;
   }
   return Response.json(

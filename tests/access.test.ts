@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, scryptSync } from 'node:crypto';
 import { accessError, hostedConfigurationError, sameOrigin } from '../src/lib/access';
 
 const env = {
@@ -68,4 +68,22 @@ test('cross-origin reads and writes are rejected, including authenticated browse
 test('local installation remains restricted to loopback', () => {
   assert.equal(accessError(new Request('http://127.0.0.1:3000/api/state'), {}), null);
   assert.equal(accessError(new Request('https://garden.example.com/api/state'), {})?.status, 403);
+});
+test('salted scrypt authentication takes precedence over a legacy password hash', () => {
+  const salt = Buffer.alloc(16, 1);
+  const hash = scryptSync('chosen-test-password', salt, 64, { N: 32768, maxmem: 64 * 1024 * 1024 });
+  const configured = {
+    ...env,
+    LIFE_GARDEN_PASSWORD_SCRYPT: `${salt.toString('hex')}:${hash.toString('hex')}`,
+  };
+  assert.equal(accessError(request('chosen-test-password'), configured), null);
+  assert.equal(accessError(request('random-test-password'), configured)?.status, 401);
+  assert.equal(accessError(request('incorrect'), configured)?.status, 401);
+  assert.equal(
+    accessError(request('chosen-test-password'), {
+      ...configured,
+      LIFE_GARDEN_PASSWORD_SCRYPT: 'invalid',
+    })?.status,
+    503,
+  );
 });

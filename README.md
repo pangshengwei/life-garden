@@ -30,7 +30,7 @@ Local mode binds to loopback and the data API accepts local, same-origin request
 
 The hosted app is a **single-owner garden**, protected by browser HTTP Basic authentication over HTTPS. The page and data API both require authentication. It does not provide separate accounts or per-user data isolation; only share credentials with someone who should have full access to your garden.
 
-1. Run `npm run create-hosted-access` once. This creates `.deployment-access.json` with a cryptographically random 256-bit password and its SHA-256 hash. The file has owner-only permissions and is excluded from Git and Railway uploads. Store the password in your password manager. Use a newly generated password for rotation; a fast SHA-256 hash is appropriate here only because the password is random and high entropy, not human-chosen.
+1. Run `npm run create-hosted-access` once. This creates `.deployment-access.json` with a cryptographically random 256-bit password and a salted scrypt hash. The file has owner-only permissions and is excluded from Git and Railway uploads. Store the password in your password manager. Scrypt uses a unique 16-byte salt, N=32768, r=8 and p=1. Existing deployments with generated random passwords can still use the legacy SHA-256 variable; scrypt takes precedence when configured.
 2. Create a Railway service for this repository and attach a persistent volume at `/data`. Keep **one replica**. SQLite and the generated Markdown mirror live on this volume; the container filesystem is otherwise disposable. Enable volume backups in Railway and retain periodic JSON exports.
 3. Generate an HTTPS Railway domain and set these server variables before deploying:
 
@@ -39,7 +39,7 @@ The hosted app is a **single-owner garden**, protected by browser HTTP Basic aut
    | `LIFE_GARDEN_HOSTED` | `1` |
    | `LIFE_GARDEN_DATA_DIR` | `/data` (must match the volume mount) |
    | `LIFE_GARDEN_USERNAME` | `username` from the private access file |
-   | `LIFE_GARDEN_PASSWORD_SHA256` | `passwordSha256` from the private access file |
+   | `LIFE_GARDEN_PASSWORD_SCRYPT` | `passwordScrypt` from the private access file |
    | `LIFE_GARDEN_ORIGIN` | exact HTTPS origin, with no trailing slash |
    | `PORT` | `3000` |
 
