@@ -88,9 +88,9 @@ Fresh clones start with generic aspirational goals, configurable habits, and no 
 
 ## Correct a past day or find a missing habit
 
-Select a date in the weekly habit calendar. Row labels and pencil controls use that date’s saved settings. You can edit historical names, targets and schedules; the editor shows an effective date and whether the change is for one day or from that date onward. **Use today’s name, target and schedule** copies the current settings into a historical correction without silently applying them to other days.
+Click a past or current square in the weekly habit calendar to open that specific habit’s logging controls. A **+** means it is not scheduled on that date; the dialog explains why and offers **Add to this day** before logging. Future dates and dates before tracking began are locked and labelled. You can also select a date using the calendar header. Row labels and pencil controls use that date’s saved settings. You can edit historical names, targets and schedules; the editor shows an effective date and whether the change is for one day or from that date onward. **Use today’s name, target and schedule** copies the current settings into a historical correction without silently applying them to other days.
 
-The daily list includes scheduled, unpaused habits that have already started on the selected date. **Not scheduled on this day** lists the other habits and explains whether they are on another weekday, paused, or not yet started. **Add to this day** explicitly uses the current habit settings for that one date and preserves the normal recurring plan. No completion is invented; log the actual result afterward.
+The daily list includes scheduled, unpaused habits that have already started on the selected date. **Show other habits** jumps to the additional habits beneath the scheduled list. **Not scheduled on this day** lists these other habits and explains whether they are on another weekday, paused, or not yet started. **Add to this day** explicitly uses the current habit settings for that one date and preserves the normal recurring plan. No completion is invented; log the actual result afterward.
 
 A Tuesday habit starting on a Wednesday does not automatically backfill the previous Tuesday. Use an earlier start date or **Add to this day** when that is what you intend.
 

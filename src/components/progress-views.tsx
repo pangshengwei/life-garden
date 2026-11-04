@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Archive,
   ArrowRight,
@@ -38,6 +38,7 @@ import {
   useApp,
 } from './ui';
 import { HabitRow } from './habit-row';
+import { HabitDayDialog } from './habit-day-dialog';
 import { HabitEditor, NewHabitButton, RemovedHabitsButton } from './habit-management';
 import { Plant } from './plant';
 import { ActivityBoard, HabitDayScore } from './activity-board';
@@ -357,6 +358,8 @@ export function HabitsView() {
   const [edit, setEdit] = useState<Habit | null | undefined>(undefined);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState(today);
+  const [cell, setCell] = useState<{ habitId: string; date: string } | null>(null);
+  const otherRef = useRef<HTMLDetailsElement>(null);
   const dates = weekDates(addDays(today, offset * 7));
   const visible = data.habits
     .filter((h) => !h.archived || habitAvailability(h, selected) === 'scheduled')
@@ -421,7 +424,8 @@ export function HabitsView() {
         <p className="muted small-text">
           Names and edit controls show the settings for{' '}
           {dateLabel(selected, { weekday: 'long', day: 'numeric', month: 'short' })}. Select a day
-          to view or correct it.
+          to view or correct it. Click a past or current square to open that habit. A plus means you
+          can add it for that date; future dates cannot be logged yet.
         </p>
         <p className="table-scroll-hint">Swipe the calendar to see the whole week.</p>
         <div
@@ -470,29 +474,50 @@ export function HabitsView() {
                     const h = scheduled(data, date).find((h) => h.id === habit.id);
                     const value = data.days[date]?.logs[habit.id];
                     const state =
-                      date > today
-                        ? 'future'
+                      date < data.startedOn
+                        ? 'untracked'
                         : !h
                           ? 'off'
-                          : value === 'rest'
-                            ? 'excused'
-                            : completed(h, value)
-                              ? 'complete'
-                              : 'empty';
+                          : date > today
+                            ? 'future'
+                            : value === 'rest'
+                              ? 'excused'
+                              : completed(h, value)
+                                ? 'complete'
+                                : 'empty';
+                    const blocked = date > today || date < data.startedOn;
+                    const action =
+                      date > today
+                        ? 'Future date: logging opens on that day.'
+                        : date < data.startedOn
+                          ? 'Before tracking began.'
+                          : !h
+                            ? 'Click to add this habit for this date.'
+                            : 'Click to log or correct this habit.';
                     return (
                       <td key={date}>
                         <button
                           className={`heat-cell ${state}`}
                           aria-label={`${def.name}, ${date}: ${state}`}
-                          disabled={date > today || date < data.startedOn}
-                          onClick={() => setSelected(date)}
+                          title={`${dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })} · ${action}`}
+                          disabled={blocked}
+                          onClick={() => {
+                            setSelected(date);
+                            setCell({ habitId: habit.id, date });
+                          }}
                         >
                           {state === 'complete' ? (
                             <Check size={15} />
                           ) : state === 'excused' ? (
                             '☾'
                           ) : state === 'off' ? (
-                            '·'
+                            blocked ? (
+                              '·'
+                            ) : (
+                              <Plus size={12} />
+                            )
+                          ) : state === 'untracked' ? (
+                            '—'
                           ) : (
                             ''
                           )}
@@ -524,7 +549,9 @@ export function HabitsView() {
             No completion recorded
           </span>
           <span>☾ Rest / excused</span>
-          <span>· Not scheduled</span>
+          <span>＋ Not scheduled · click to add</span>
+          <span>Faded squares: future dates</span>
+          <span>— Before tracking began</span>
         </div>
       </div>
       <section className="card" aria-label="Habits for selected day">
@@ -541,6 +568,24 @@ export function HabitsView() {
             <RemovedHabitsButton />
           </div>
         </div>
+        {otherHabits.length > 0 && (
+          <div className="habit-list-filter-note">
+            <span>{scheduled(data, selected).length} scheduled habits for this date.</span>
+            <button
+              className="text-button"
+              onClick={() => {
+                if (otherRef.current) {
+                  otherRef.current.open = true;
+                  otherRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  otherRef.current.querySelector('summary')?.focus();
+                }
+              }}
+            >
+              Show {otherHabits.length} other habits
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
         {scheduled(data, selected).map((h) => (
           <HabitRow key={h.id} habit={h} date={selected} />
         ))}
@@ -548,7 +593,7 @@ export function HabitsView() {
           <p className="muted">No habits scheduled. A little breathing room.</p>
         )}
         {otherHabits.length > 0 && (
-          <details className="other-habits" open>
+          <details ref={otherRef} className="other-habits" open>
             <summary>Not scheduled on this day ({otherHabits.length})</summary>
             <p className="muted">
               Only scheduled habits appear above. Include any of these for this date, or edit its
@@ -613,6 +658,9 @@ export function HabitsView() {
           </details>
         )}
       </section>
+      {cell && (
+        <HabitDayDialog habitId={cell.habitId} date={cell.date} onClose={() => setCell(null)} />
+      )}
       {edit !== undefined && (
         <HabitEditor
           habit={edit || undefined}

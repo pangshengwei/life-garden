@@ -41,6 +41,10 @@ A separate fixture reproduced a weekly habit changed to Tuesday starting on a We
 
 The missing-habit section explains paused, not-started and weekday exclusions, and provides an explicit one-day inclusion action. The empty-state component now has its own CSS class so empty heatmap buttons and the legend no longer inherit the empty-state padding.
 
+## Weekly grid interaction
+
+Clicked an unscheduled current-day square and verified it opened that habit’s schedule explanation. Included it for that date, recorded 15/45 minutes through the nested log form, then completed the target. Its square turned green and the habit appeared in the daily list. The completion persisted after refresh. Future scheduled dates remained disabled. The other-habits shortcut expanded the section, scrolled to it and focused its summary. No console errors were observed. These actions used an isolated test database.
+
 ## Boundaries
 
 - No real external Obsidian vault path has been provided. The generated mirror is staged in `data/obsidian/Life Garden`; actual Obsidian desktop/Bases rendering has not been tested. YAML, links, Bases files, and annotation preservation were inspected/tested on disk.
