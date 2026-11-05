@@ -28,21 +28,26 @@ export function activityDay(data: GardenData, date: string, today: string) {
     intensity: !count ? 0 : count === 1 ? 1 : count <= 3 ? 2 : count <= 6 ? 3 : 4,
   };
 }
+export const HABIT_SCORE_START = '2026-11-02';
+
 export function rollingHabitScore(data: GardenData, today: string) {
   const start = addDays(today, -29);
+  const scoringStart = [start, data.startedOn, HABIT_SCORE_START].sort().at(-1)!;
   const days = Array.from({ length: 30 }, (_, i) => activityDay(data, addDays(start, i), today));
-  const tracked = days.filter((d) => d.tracked);
+  const tracked = days.filter((d) => d.tracked && d.date >= scoringStart);
   const eligible = tracked.filter((d) => d.total > 0);
-  const hits = eligible.filter((d) => d.hit).length;
+  // Each day has equal weight. Average the exact fractions, not rounded daily
+  // percentages or pooled completions across days with different habit counts.
+  const completionSum = eligible.reduce((sum, day) => sum + day.done / day.total, 0);
   return {
     start,
+    scoringStart,
     end: today,
     days,
-    hits,
     eligible: eligible.length,
     tracked: tracked.length,
     untracked: 30 - tracked.length,
     restDays: tracked.length - eligible.length,
-    percent: eligible.length ? Math.round((hits / eligible.length) * 100) : null,
+    percent: eligible.length ? Math.round((completionSum / eligible.length) * 1000) / 10 : null,
   };
 }
