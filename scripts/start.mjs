@@ -35,5 +35,26 @@ const child = spawn(
   ],
   { stdio: 'inherit', env: process.env },
 );
-for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => child.kill(signal));
-child.on('exit', (code) => process.exit(code ?? 1));
+let shutdownSignal;
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, () => {
+    if (shutdownSignal) return;
+    shutdownSignal = signal;
+    console.log(`Received ${signal}; waiting for active requests to finish.`);
+    child.kill(signal);
+  });
+}
+child.once('error', (error) => {
+  console.error('Could not start the server:', error.message);
+  process.exitCode = 1;
+});
+child.once('close', (code, signal) => {
+  // Next.js drains requests before exiting 143/130 for SIGTERM/SIGINT.
+  // Normalize only a shutdown that this launcher actually requested. Keep
+  // unrelated failures and forced kills visible to Railway's crash detection.
+  const expectedCode = shutdownSignal === 'SIGTERM' ? 143 : 130;
+  const cleanShutdown =
+    shutdownSignal && (code === 0 || code === expectedCode || signal === shutdownSignal);
+  process.exitCode = cleanShutdown ? 0 : (code ?? 1);
+  if (cleanShutdown) console.log('Server stopped cleanly.');
+});
