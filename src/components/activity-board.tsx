@@ -11,35 +11,42 @@ export function HabitDayScore({ compact = false }: { compact?: boolean }) {
   return (
     <section
       className={`card rolling-score ${compact ? 'compact' : ''}`}
-      aria-label="30-day daily habit goal score"
+      aria-label="Past 30-day average daily habit score"
     >
       <div className="section-heading">
         <div>
-          <span className="eyebrow">DAILY HABIT GOALS · LAST 30 DAYS</span>
-          <h2>A rhythm you can return to</h2>
+          <span className="eyebrow">PAST 30D HABIT SCORE</span>
+          <h2>Average daily completion</h2>
         </div>
         <CalendarDays size={20} />
       </div>
       <div className="rolling-value">
-        <strong>{score.percent === null ? '—' : `${score.percent}%`}</strong>
+        <strong aria-live="polite" aria-atomic="true">
+          {score.percent === null ? '—' : `${score.percent}%`}
+        </strong>
         <span>
-          {score.hits} of {score.eligible} scored days
+          {score.eligible} {score.eligible === 1 ? 'day' : 'days'} in this average
           <br />
-          all scheduled habit targets met
+          each day counts equally
         </span>
       </div>
-      <Progress value={score.percent ?? 0} label="Days meeting every scheduled habit target" />
+      <Progress value={score.percent ?? 0} label="Average daily scheduled-habit completion" />
       <p className="muted">
-        {dateLabel(score.start)} – {dateLabel(today)} · {score.tracked}/30 calendar days tracked
+        {score.tracked
+          ? `${dateLabel(score.scoringStart)} – ${dateLabel(today)} · ${score.tracked}/30 calendar days in the scoring period`
+          : 'Scoring begins 2 November 2026 or when your tracking begins, whichever is later'}
         {score.restDays ? ` · ${score.restDays} fully excused / unscheduled days excluded` : ''}.
       </p>
       <details>
         <summary>How this score works</summary>
         <p>
-          A day is hit when every scheduled, non-excused habit reaches its target. Missing logs
-          after tracking begins count as unfinished. Days before tracking began, fully paused or
-          excused days, and days with no scheduled habits are excluded. Today is included and can
-          still improve. Goal milestones colour the board but do not change this habit-only score.
+          Each day’s score is completed habits ÷ scheduled, non-excused habits × 100. A habit counts
+          as completed when it meets its full target. This score averages those daily scores equally
+          over today and the previous 29 days, counting only 2 November 2026 onward and no earlier
+          than tracking began. Missing logs on an eligible day count as unfinished; fully paused,
+          excused or unscheduled days are excluded. For example, 50% and 100% average to 75%, even
+          if those days have different habit counts. Today’s check-offs and past-day corrections
+          update the average immediately. Goal milestones do not affect it.
         </p>
       </details>
       {compact && (

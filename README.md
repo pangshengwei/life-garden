@@ -106,7 +106,7 @@ Optionally relocate all private app data with `LIFE_GARDEN_DATA_DIR` (absolute p
 - Garden: six life areas, related goals/habits, outcome progress, activity counts, XP, levels and an original animated plant.
 - Journal: calendar browsing, morning notes, evening prompts, editable weekly reflections, tomorrow planning and actual overnight sleep records on the wake-up date.
 - Finance: dated manual snapshots, liquid wealth with/without SRS, restricted SRS, net worth, optional securities/property/contribution amounts, allocation, FIRE progress and growth charts after two snapshots.
-- Insights: a GitHub-style daily board, rolling 30-day habit-goal hit rate, explained weekly consistency, completion trends, balanced activity counts, and earned badges. There are no invented historical habit completions.
+- Insights: a GitHub-style daily board, rolling 30-day average daily habit completion score, explained weekly consistency, completion trends, balanced activity counts, and earned badges. There are no invented historical habit completions.
 - Responsive layout, light/dark themes, keyboard labels, native modal focus containment and reduced-motion support.
 
 Fresh clones start with generic aspirational goals, configurable habits, and no financial snapshots or completed activity. Your personal balances, employer/project context, name, journal notes and exported backups belong in the ignored local data directory, not the published source. Existing local databases keep their personal goals and snapshots when the app is upgraded. Financial goals and snapshots are edited independently so an old snapshot cannot silently overwrite a newer goal update.
@@ -131,9 +131,11 @@ Colour intensity counts **completed scheduled habits + goals newly marked achiev
 
 ### Rolling 30-day daily habit score
 
-The window is today and the previous 29 Singapore dates. A day is **hit** only when every scheduled, non-excused habit meets its own target. Weekly habits are included on their scheduled days. The percentage is `hit days / scored days × 100`.
+The window is today and the previous 29 Singapore dates, counting only **2 November 2026 onward** and no earlier than the garden’s tracking start. Each daily score is `completed scheduled habits / scheduled, non-excused habits × 100`. A habit counts as completed when it meets its full target; weekly habits count only on their scheduled dates.
 
-Days before tracking began, dates with no scheduled habits, and fully excused or paused days are excluded from the denominator. Missing records after tracking began count as unfinished. Today is included and can still improve. The UI shows both the scored-day denominator and the number of calendar days tracked, so a new garden is never presented as having 30 days of evidence. An empty denominator displays a dash. Goal achievements affect square colour but not this habit-only percentage.
+The **Past 30D habit score** is the arithmetic mean of those daily scores, with every eligible day weighted equally. A day with 1/2 habits and a day with 1/1 habits average to 75%, rather than pooling them into 2/3. The calculation uses exact daily fractions and rounds only the final percentage to one decimal place.
+
+Dates with no scheduled habits and fully excused or paused days are excluded. A scheduled day with no completed habits contributes 0%, even if it has no saved logs. Today is included and can still improve. Checking or unchecking habits and changing historical targets, schedules or excused status recalculates the average immediately from the current garden data. Changes persist through the normal SQLite save flow. An empty denominator displays a dash. The UI shows how many days contribute; 1 November remains editable but does not contribute to this score. Goal achievements affect square colour but not this habit-only percentage.
 
 ### Weekly consistency and XP
 
